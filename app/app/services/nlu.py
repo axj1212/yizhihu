@@ -87,9 +87,23 @@ def rule_extract(transcript: list[dict]) -> dict:
     }
 
 
+def _as_float(v):
+    """把血糖值统一成 float。
+
+    规则引擎给的是数值，但大模型可能返回 "13.5"、"13.5 mmol/L"、"偏高" 等字符串，
+    直接比较会抛 TypeError 导致外呼接口 500。取不到数值就返回 None（按「未抽取到」处理）。
+    """
+    if v is None or isinstance(v, bool):
+        return None
+    if isinstance(v, (int, float)):
+        return float(v)
+    m = re.search(r"-?\d+(?:\.\d+)?", str(v))
+    return float(m.group()) if m else None
+
+
 def grade_risk(s: dict) -> tuple[str, list[str]]:
     reasons: list[str] = []
-    fasting, pp = s.get("fasting_glucose"), s.get("postprandial_glucose")
+    fasting, pp = _as_float(s.get("fasting_glucose")), _as_float(s.get("postprandial_glucose"))
     symptoms = s.get("symptoms") or []
     text = " ".join(s.get("quotes") or [])
 
@@ -205,6 +219,10 @@ def analyze(transcript: list[dict], patient_name: str, use_llm: bool = True) -> 
                 if key in data and data[key] not in (None, "", []):
                     s[key] = data[key]
             engine = "llm"
+
+    # 血糖字段统一成数值（取不到则为 None），避免下游比较与前端展示出现字符串
+    for key in ("fasting_glucose", "postprandial_glucose"):
+        s[key] = _as_float(s.get(key))
 
     level, reasons = grade_risk(s)
     summary = s.get("summary") or summarize(s, level, patient_name)
