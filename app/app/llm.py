@@ -32,10 +32,24 @@ def available() -> bool:
     return bool(_key())
 
 
+def _serverless() -> bool:
+    """Vercel / AWS Lambda 等按次计费环境：函数执行时长有硬上限。"""
+    return bool(os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"))
+
+
 def chat(messages: list[dict], temperature: float = 0.2, max_tokens: int = 2200,
-         timeout: float = 60.0) -> str | None:
-    """带一次重试的对话调用；现场网络抖动时提高成功率。"""
-    for attempt in range(2):
+         timeout: float | None = None) -> str | None:
+    """带重试的对话调用；现场网络抖动时提高成功率。
+
+    Serverless 环境下把单次等待压到 4 秒且不再重试，避免跨境模型调用
+    触发函数执行超时（表现同样是外呼 500）。失败时 nlu.analyze 会自动
+    回落到确定性规则引擎，结构化结果、风险分级、工单链路不受影响。
+    本地 / ECS 常驻部署维持 60 秒 + 一次重试，可充分使用大模型增强。
+    """
+    if timeout is None:
+        timeout = 4.0 if _serverless() else 60.0
+    attempts = 1 if _serverless() else 2
+    for _ in range(attempts):
         text = _chat_once(messages, temperature, max_tokens, timeout)
         if text is not None:
             return text
