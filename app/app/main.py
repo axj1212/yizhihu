@@ -13,6 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from . import llm
+from .auth import install_auth
 from .db import SessionLocal, get_db, init_db
 from .models import (CallLine, CallResult, CallTask, Patient, Plan, Protocol,
                      Setting, Stage, Ticket, now)
@@ -26,6 +27,10 @@ from .services.plan_service import (business_date, create_plan, get_setting,
 ROOT = Path(__file__).resolve().parents[1]
 app = FastAPI(title="医智呼 · AI 随访外呼系统", version="1.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+# 竞赛评审门禁：未登录一律先到 /login（账号 reviewer / 密码 Yizhihu2026）。
+# 必须放在 CORS 之后，使该中间件位于最外层；登录态为 HMAC Cookie，Serverless 多实例通用。
+install_auth(app)
 
 RISK_LABEL = {"blue": "蓝色·平稳", "yellow": "黄色·轻度", "orange": "橙色·中度", "red": "红色·紧急"}
 
