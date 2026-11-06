@@ -40,25 +40,25 @@ LOGIN_PAGE = """<!doctype html>
 <style>
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
- background:linear-gradient(135deg,#eef4fc,#dbe9fb);color:#1f2937;
- font-family:"Microsoft YaHei","PingFang SC","Segoe UI",system-ui,sans-serif}
-.card{width:min(420px,92vw);background:#fff;border:1px solid #e3e8ef;border-radius:16px;
- padding:34px 34px 28px;box-shadow:0 12px 40px rgba(20,60,110,.12)}
-.logo{width:52px;height:52px;border-radius:14px;background:#1268d3;color:#fff;
- display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;margin-bottom:18px}
-h1{font-size:20px;margin:0 0 6px}
-.sub{color:#5b6675;font-size:13px;margin:0 0 22px}
-label{display:block;font-size:13px;font-weight:600;margin-bottom:14px}
-input{width:100%;margin-top:6px;padding:11px 12px;border:1px solid #d5dde8;border-radius:8px;
- font-size:14px;outline:none}
-input:focus{border-color:#1268d3;box-shadow:0 0 0 3px rgba(18,104,211,.12)}
-button{width:100%;padding:12px;border:0;border-radius:8px;background:#1268d3;color:#fff;
- font-size:15px;font-weight:600;cursor:pointer;margin-top:4px}
-button:hover{background:#0d57b4}
-.err{display:none;background:#fdecec;color:#b42318;border:1px solid #f6c9c9;
+ background:#f5f8f7;color:#1f2f2e;
+ font-family:"PingFang SC","Microsoft YaHei","Segoe UI",system-ui,-apple-system,sans-serif}
+.card{width:min(400px,92vw);background:#fff;border:1px solid #dce7e5;border-radius:12px;
+ padding:32px 32px 26px;box-shadow:0 2px 10px rgba(31,47,46,.06)}
+.logo{width:46px;height:46px;border-radius:12px;background:#2f9e90;color:#fff;
+ display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;margin-bottom:16px}
+h1{font-size:20px;line-height:28px;font-weight:700;margin:0 0 6px;color:#1f2f2e}
+.sub{color:#455a57;font-size:13px;line-height:20px;margin:0 0 20px}
+label{display:block;font-size:13px;font-weight:600;margin-bottom:14px;color:#1f2f2e}
+input{width:100%;margin-top:6px;padding:9px 12px;border:1px solid #b9d3cf;border-radius:8px;
+ font-size:14px;color:#1f2f2e;background:#fff;outline:none;transition:border-color .2s,box-shadow .2s}
+input:focus{border-color:#2f9e90;box-shadow:0 0 0 3px rgba(47,158,144,.12)}
+button{width:100%;padding:11px;border:1px solid #2f9e90;border-radius:8px;background:#2f9e90;color:#fff;
+ font-size:15px;font-weight:600;cursor:pointer;margin-top:4px;transition:background-color .2s,border-color .2s}
+button:hover{background:#248578;border-color:#248578}
+.err{display:none;background:#fdecec;color:#b42318;border:1px solid #f5c2c2;
  border-radius:8px;padding:9px 12px;font-size:13px;margin-bottom:16px}
 .err.show{display:block}
-.note{color:#8a94a3;font-size:12px;line-height:1.7;margin:18px 0 0;text-align:center}
+.note{color:#7f9491;font-size:12px;line-height:18px;margin:16px 0 0;text-align:center}
 </style></head><body>
 <div class="card">
  <div class="logo">医</div>
