@@ -290,10 +290,51 @@ async function publishProtocol(id) {
 }
 
 /* ------------------------------------------------------------------ 患者 */
+// 状态 → 轻底语义标签；只映射展示色，不改变状态取值与判断
+function statusPill(s) { return s === "在访" ? "teal" : s === "转院" ? "gray" : "yellow"; }
+// 出院日期 → 星期，仅用于时间轴标注；非法日期返回空串
+function weekOf(dt) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dt || "")) return "";
+  const d = new Date(dt + "T00:00:00");
+  return isNaN(d.getTime()) ? "" : "周" + "日一二三四五六"[d.getDay()];
+}
+
 async function renderPatients(page = 1) {
   state.patients.page = page;
   const q = state.patients.q || "", dept = state.patients.dept || "", status = state.patients.status || "";
-  const d = await api(`/api/patients?page=${page}&size=12&q=${encodeURIComponent(q)}&dept=${encodeURIComponent(dept)}&status=${encodeURIComponent(status)}`);
+  const qs = `q=${encodeURIComponent(q)}&dept=${encodeURIComponent(dept)}&status=${encodeURIComponent(status)}`;
+  // 左侧时间轴按出院日期分组；右侧名单与分页沿用原 12 条/页
+  const [d, all] = await Promise.all([
+    api(`/api/patients?page=${page}&size=12&${qs}`),
+    api(`/api/patients?page=1&size=200&${qs}`),
+  ]);
+  state.patients.all = all.items || [];
+
+  // 仅按出院日期归组，不按科室切列
+  const byDate = {}, dateCount = {};
+  state.patients.all.forEach(p => {
+    const dt = p.discharge_date || "未记录";
+    dateCount[dt] = (dateCount[dt] || 0) + 1;
+    (byDate[dt] = byDate[dt] || []).push(p);
+  });
+  const dates = Object.keys(byDate).sort().reverse();
+
+  const timeline = dates.length ? dates.map(dt => `
+    <section class="tl-group">
+      <div class="tl-date">
+        <b>${esc(dt)}</b>
+        <span>${weekOf(dt) ? weekOf(dt) + " · " : ""}${dateCount[dt]} 人</span>
+      </div>
+      <div class="tl-list">
+        ${byDate[dt].map(p => `
+          <div class="tl-card" onclick="openPatient('${p.id}')" onmouseenter="hoverPatient(event,'${p.id}')" onmouseleave="hidePatientCard()">
+            <div class="tl-top"><b>${esc(p.name)}</b><span class="pill ${statusPill(p.status)}">${esc(p.status)}</span></div>
+            <div class="tl-dg">${esc(p.diagnosis || "—")}</div>
+            <div class="tl-meta">${esc(p.dept || "未分科室")}${p.risk_group ? " · " + esc(p.risk_group) : ""}</div>
+          </div>`).join("")}
+      </div>
+    </section>`).join("") : `<div class="empty">没有符合条件的患者</div>`;
+
   $("#view").innerHTML = `
     <div class="filters">
       <input placeholder="搜索姓名 / 住院号 / 诊断 / 电话" value="${esc(q)}" onkeydown="if(event.key==='Enter'){state.patients.q=this.value;renderPatients(1)}"/>
@@ -309,29 +350,74 @@ async function renderPatients(page = 1) {
       <button class="btn" onclick="importDialog()">导入出院名单</button>
       <button class="btn primary" onclick="newPatient()">＋ 新建患者</button>
     </div>
-    <div class="card"><div class="card-b" style="padding:0 4px">
-      <table><thead><tr><th>患者</th><th>诊断</th><th>科室</th><th>出院日期</th><th>随访方案</th><th>状态</th><th></th></tr></thead><tbody>
-      ${d.items.map(p => `<tr>
-        <td><b class="link" onclick="openPatient('${p.id}')">${esc(p.name)}</b>
-          <div class="tiny muted">${esc(p.sex)} · ${p.age || "—"} 岁 · ${esc(p.inpatient_no)}</div></td>
-        <td style="max-width:280px"><div class="tiny">${esc((p.diagnosis || "").slice(0, 42))}</div>
-          <div class="tiny muted">${p.risk_group}</div></td>
-        <td class="tiny">${esc(p.dept)}</td>
-        <td class="tiny muted">${p.discharge_date || "—"}</td>
-        <td class="tiny">${esc(p.protocol_name || "—")}</td>
-        <td><span class="pill ${p.status === "在访" ? "teal" : p.status === "转院" ? "gray" : "yellow"}">${esc(p.status)}</span></td>
-        <td style="text-align:right">
-          ${p.plan_id ? `<button class="btn sm" onclick="openPlan('${p.plan_id}')">计划</button>`
-            : `<button class="btn sm primary" onclick="makePlan('${p.id}')">生成计划</button>`}
-        </td>
-      </tr>`).join("")}</tbody></table>
-      ${d.items.length ? "" : `<div class="empty">没有符合条件的患者</div>`}
-      <div class="pager">共 ${d.total} 人
-        <button class="btn sm" ${page <= 1 ? "disabled" : ""} onclick="renderPatients(${page - 1})">上一页</button>
-        <span>${page}</span>
-        <button class="btn sm" ${page * 12 >= d.total ? "disabled" : ""} onclick="renderPatients(${page + 1})">下一页</button>
+    <div class="patients-grid">
+      <div class="card patients-timeline">
+        <div class="card-h"><h3>出院时间轴</h3>
+          <span class="hint">按出院日期分组 · 共 ${state.patients.all.length} 人 · ${dates.length} 个出院日</span></div>
+        <div class="tl-wrap">${timeline}</div>
       </div>
-    </div></div>`;
+      <aside class="patients-side">
+        <div class="card">
+          <div class="card-h"><h3>患者名单</h3><span class="hint">共 ${d.total} 人</span></div>
+          <div class="side-list">
+            ${d.items.length ? d.items.map(p => `
+              <div class="side-item">
+                <div class="side-av">${esc((p.name || "?").slice(0, 1))}</div>
+                <div class="side-bd">
+                  <div class="side-nm"><b class="link" onclick="openPatient('${p.id}')">${esc(p.name)}</b>
+                    <span class="side-meta">${esc(p.sex)} · ${p.age || "—"} 岁</span></div>
+                  <div class="side-sub">${esc(p.dept)} · ${esc((p.diagnosis || "—").slice(0, 16))}</div>
+                  <div class="side-st"><span class="pill ${statusPill(p.status)}">${esc(p.status)}</span>
+                    <span class="side-plan ${p.plan_id ? "" : "muted"}">${p.plan_id ? "计划已生成" : "待生成计划"}</span></div>
+                </div>
+                ${p.plan_id ? `<button class="btn sm" onclick="openPlan('${p.plan_id}')">计划</button>`
+                  : `<button class="btn sm primary" onclick="makePlan('${p.id}')">生成计划</button>`}
+              </div>`).join("") : `<div class="empty">没有符合条件的患者</div>`}
+          </div>
+          <div class="pager">共 ${d.total} 人
+            <button class="btn sm" ${page <= 1 ? "disabled" : ""} onclick="renderPatients(${page - 1})">上一页</button>
+            <span>${page}</span>
+            <button class="btn sm" ${page * 12 >= d.total ? "disabled" : ""} onclick="renderPatients(${page + 1})">下一页</button>
+          </div>
+        </div>
+      </aside>
+    </div>`;
+}
+
+/* 悬停档案浮层：只读取列表里已有的字段，不额外请求接口 */
+function hoverPatient(e, id) {
+  const p = (state.patients.all || []).find(x => x.id === id);
+  if (!p) return;
+  let el = $("#hoverCard");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "hoverCard";
+    el.className = "hover-card";
+    document.body.appendChild(el);
+  }
+  el.innerHTML = `
+    <div class="hc-h"><b>${esc(p.name)}</b><span class="pill ${statusPill(p.status)}">${esc(p.status)}</span></div>
+    <div class="hc-sub">${esc(p.sex)} · ${p.age || "—"} 岁 · 住院号 ${esc(p.inpatient_no)}</div>
+    <div class="hc-grid">
+      <span>诊断</span><em>${esc(p.diagnosis || "—")}</em>
+      <span>科室</span><em>${esc(p.dept || "—")}</em>
+      <span>出院日期</span><em>${esc(p.discharge_date || "—")}</em>
+      <span>随访方案</span><em>${esc(p.protocol_name || "未生成计划")}</em>
+      <span>风险分组</span><em>${esc(p.risk_group || "—")}</em>
+      <span>出院医嘱</span><em>${esc(p.review_advice || p.discharge_advice || "—")}</em>
+    </div>
+    <div class="hc-foot">点击查看完整档案与通话记录</div>`;
+  el.classList.add("on");
+  const pad = 14, r = el.getBoundingClientRect();
+  let x = e.clientX + pad, y = e.clientY + pad;
+  if (x + r.width > innerWidth - 8) x = e.clientX - r.width - pad;
+  if (y + r.height > innerHeight - 8) y = e.clientY - r.height - pad;
+  el.style.left = Math.max(8, x) + "px";
+  el.style.top = Math.max(8, y) + "px";
+}
+function hidePatientCard() {
+  const el = $("#hoverCard");
+  if (el) el.classList.remove("on");
 }
 
 async function openPatient(id) {
@@ -352,7 +438,7 @@ async function openPatient(id) {
     <div class="section-t">随访计划</div>
     ${plan ? `<div class="row" style="margin-bottom:8px">
         <span class="pill ${plan.status === "active" ? "teal" : plan.status === "terminated" ? "gray" : "green"}">${plan.status === "active" ? "执行中" : plan.status === "terminated" ? "已终止" : "已完成"}</span>
-        <span class="lock">计划已固化 v${plan.protocol_version}</span>
+        <span class="lock">计划已固化 v${plan.protocol_version || "—"}</span>
         <span class="tiny muted">${esc(plan.protocol_name)}</span></div>
       ${timeline(plan.stages)}
       <div class="note-box" style="margin-top:12px">${(plan.events || []).map(e => `· ${e.at.slice(0, 16).replace("T", " ")} ${esc(e.text)}`).join("<br/>")}</div>`
