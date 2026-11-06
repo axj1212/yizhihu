@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>医智呼 · 云服务自检</title>
+<style>
+  body{font:14px/1.6 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:#f5f7fb;color:#16233b;margin:0;padding:28px}
+  .wrap{max-width:860px;margin:0 auto;background:#fff;border:1px solid #e3e9f3;border-radius:14px;padding:24px}
+  h1{font-size:19px;margin:0 0 6px} .sub{color:#6b7789;font-size:13px;margin-bottom:18px}
+  pre{background:#0f1b2f;color:#d6e6ff;padding:16px;border-radius:10px;overflow:auto;font-size:12.5px;min-height:120px;white-space:pre-wrap}
+  .ok{color:#0d7a45} .bad{color:#c0392b}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>医智呼 · 云服务接入自检</h1>
+  <div class="sub">在应用发布域名下运行，逐项验证真实云服务链路。结果以 JSON 输出，便于自动化读取。</div>
+  <pre id="out">{"done":false,"message":"自检进行中"}</pre>
+</div>
+
+<script src="/static/vendor/workbuddy-cloud-sdk.js"></script>
+<script src="/static/cloud-config.js"></script>
+<script src="/static/cloud.js"></script>
+<script>
+(async function () {
+  const out = document.getElementById("out");
+  const q = new URLSearchParams(location.search);
+  const stage = q.get("stage") || "test";
+  const emit = (item, all) => {
+    out.textContent = JSON.stringify({ done: false, stage: stage, progress: all }, null, 2);
+  };
+  try {
+    if (stage === "send") {
+      const email = q.get("email") || "";
+      await CloudKit.sendCode(email);
+      localStorage.setItem("yzh_otp", JSON.stringify(CloudKit.state.pendingOtp));
+      out.textContent = JSON.stringify({ done: true, stage: "send", message: "验证码已发送，挑战已暂存" }, null, 2);
+    } else if (stage === "verify") {
+      const pending = JSON.parse(localStorage.getItem("yzh_otp") || "null");
+      if (!pending) throw new Error("没有待验证的挑战，请先执行 stage=send");
+      CloudKit.state.pendingOtp = pending;
+      await CloudKit.verifyCode(pending.email, q.get("code") || "");
+      localStorage.removeItem("yzh_otp");
+      const steps = await CloudKit.selfTest(emit);
+      const passed = steps.filter(x => x.ok).length;
+      out.textContent = JSON.stringify({ done: true, stage: "verify", signedIn: true, passed: passed, total: steps.length, steps: steps }, null, 2);
+    } else if (stage === "sync") {
+      const n = await CloudKit.syncFromLocal();
+      const rec = await CloudKit.loadRecords(1, "");
+      out.textContent = JSON.stringify({
+        done: true, stage: "sync", synced: n, cloudRows: rec.total,
+        sample: rec.items.slice(0, 3).map(x => ({ patient: x.patient_name, risk: x.risk_level, structured: !!x.structured }))
+      }, null, 2);
+    } else if (stage === "raw") {
+      await CloudKit.loadModels();
+      const sys = "你只输出一个 JSON 对象，格式为 {\"questions\":[{\"text\":\"\",\"purpose\":\"\",\"branch\":\"\"}]}，不要 Markdown 围栏，不要解释。";
+      const raw = await CloudKit.chatOnce("病种：2型糖尿病，出院7天，生成5个电话随访提问", sys,
+        { model: "hunyuan-chat", timeoutMs: 45000 });
+      out.textContent = JSON.stringify({ done: true, stage: "raw", len: raw.length, raw: raw }, null, 2);
+    } else if (stage === "ai") {
+      const qs = await CloudKit.generateQuestions({ disease: "2 型糖尿病", surgery: "无", day: 7, focus: "用药依从性与低血糖症状" });
+      out.textContent = JSON.stringify({ done: true, stage: "ai", count: qs.length, questions: qs }, null, 2);
+    } else {
+      const steps = await CloudKit.selfTest(emit);
+      const passed = steps.filter(x => x.ok).length;
+      out.textContent = JSON.stringify({ done: true, stage: "test", passed: passed, total: steps.length, steps: steps }, null, 2);
+    }
+  } catch (e) {
+    out.textContent = JSON.stringify({ done: true, stage: stage, error: String((e && e.message) || e) }, null, 2);
+  }
+  document.body.dataset.done = "1";
+})();
+</script>
+</body>
+</html>

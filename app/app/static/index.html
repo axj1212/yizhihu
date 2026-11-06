@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>医智呼 · AI 随访外呼系统</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%231268d3'/><path d='M8 16h4l2-5 3 10 2-5h5' stroke='white' stroke-width='2.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>"/>
+<link rel="stylesheet" href="/static/style.css"/>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">医</div>
+      <div class="brand-text"><b>医智呼</b><span>AI FOLLOW-UP CALL</span></div>
+    </div>
+    <nav class="nav" id="nav">
+      <div class="nav-label">随访工作</div>
+      <a href="#/dashboard" data-page="dashboard"><span class="ico">▤</span>工作台</a>
+      <a href="#/protocols" data-page="protocols"><span class="ico">✚</span>病种随访方案</a>
+      <a href="#/patients" data-page="patients"><span class="ico">☰</span>患者档案</a>
+      <a href="#/calls" data-page="calls"><span class="ico">☎</span>外呼中心</a>
+      <a href="#/tickets" data-page="tickets"><span class="ico">⚑</span>风险工单<span class="badge" id="navTicket" style="display:none">0</span></a>
+      <div class="nav-label">云与配置</div>
+      <a href="#/cloud" data-page="cloud"><span class="ico">☁</span>云服务接入<span class="badge" id="navCloud" style="display:none">云</span></a>
+      <a href="#/settings" data-page="settings"><span class="ico">⚙</span>系统设置</a>
+    </nav>
+    <div class="side-foot" id="sideFoot">
+      <div><span class="dot off" id="dotLine"></span><span id="lineText">线路检测中</span></div>
+      <div style="margin-top:6px"><span class="dot off" id="dotLlm"></span><span id="llmText">大模型检测中</span></div>
+      <div style="margin-top:6px"><span class="dot off" id="dotCloud"></span><span id="cloudText">云服务检测中</span></div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <h1 id="pageTitle">工作台</h1>
+        <div class="sub" id="pageSub">出院患者 AI 分阶段随访</div>
+      </div>
+      <div class="top-right">
+        <span class="chip" id="chipDate">业务日 —</span>
+        <span class="chip soft-teal" id="chipLine">演练模式</span>
+        <span class="avatar">李</span>
+      </div>
+    </header>
+    <main class="content" id="view"></main>
+  </div>
+</div>
+
+<div class="mask" id="mask" onclick="UI.closeAll()"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-h">
+    <h2 id="drawerTitle">详情</h2>
+    <span id="drawerTag"></span>
+    <button class="close-x" onclick="UI.closeAll()">✕</button>
+  </div>
+  <div class="drawer-b" id="drawerBody"></div>
+  <div class="drawer-f" id="drawerFoot"></div>
+</aside>
+<div class="toast" id="toast"></div>
+
+<!-- WorkBuddy 云服务官方 IIFE SDK（@dev 构建，随应用发布以免现场外网抖动） -->
+<script src="/static/vendor/workbuddy-cloud-sdk.js"></script>
+<script src="/static/cloud-config.js"></script>
+<script src="/static/app.js"></script>
+<script src="/static/cloud.js"></script>
+</body>
+</html>
