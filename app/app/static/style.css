@@ -107,6 +107,19 @@ button{font-family:inherit}
   display:flex;align-items:center;gap:16px;padding:0 24px;
   position:sticky;top:0;z-index:20;
 }
+/* 移动端导航按钮：宽屏隐藏，窄屏替代被收起的侧栏 */
+.nav-toggle{
+  display:none;width:36px;height:36px;flex:0 0 36px;order:-1;padding:0;
+  border:1px solid var(--line);border-radius:var(--radius-sm);background:#fff;
+  cursor:pointer;place-content:center;gap:4px;
+  transition:background-color .2s;
+}
+.nav-toggle span{display:block;width:16px;height:2px;border-radius:1px;background:var(--ink-2)}
+.nav-toggle:hover{background:var(--group)}
+.nav-scrim{
+  display:none;position:fixed;inset:0;z-index:55;background:rgba(31,47,46,.32);
+  opacity:0;pointer-events:none;transition:opacity .2s;
+}
 /* 工作台专属标题横幅：满宽浅青底 + 右侧同心细环，随内容一起滚动，不抢标题视线 */
 body:has(.kpis) .topbar{
   position:relative;top:auto;min-height:104px;height:auto;padding:24px;gap:24px;
@@ -199,7 +212,7 @@ body:has(.kpis) .topbar .sub{margin-top:6px}
 .pill.green{background:var(--green-l);border-color:var(--green-line);color:var(--green)}
 
 /* 表格卡片：表格贴边、由卡片裁切圆角；首末列与卡片内边距对齐，避免贴边发闷 */
-.card-b[style*="padding:0 4px"]{padding:0!important;overflow:hidden}
+.card-b[style*="padding:0 4px"]{padding:0!important;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
 /* 诊断列放宽以容纳长病名、减少无谓折行；仍保留折行，不截断内容 */
 .card-b[style*="padding:0 4px"] td[style*="max-width:280px"]{max-width:340px!important}
 /* 日期 / 状态列不拆行，避免出现 “2026-10-/24” 这类断裂 */
@@ -560,7 +573,17 @@ label.f{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-b
   .filters input{flex:1 1 180px;min-width:150px;max-width:none}
 }
 @media (max-width:860px){
-  .sidebar{position:fixed;left:-240px;z-index:60;transition:left .25s}
+  /* 侧栏改为抽屉：默认移出屏幕，由顶部按钮展开，遮罩层接管关闭 */
+  .sidebar{
+    position:fixed;left:0;top:0;height:100vh;z-index:60;
+    transform:translateX(-100%);transition:transform .25s ease;
+    box-shadow:0 8px 24px rgba(31,47,46,.14);
+  }
+  body.nav-open .sidebar{transform:none}
+  body.nav-open{overflow:hidden}
+  .nav-toggle{display:grid}
+  .nav-scrim{display:block}
+  body.nav-open .nav-scrim{opacity:1;pointer-events:auto}
   .content{padding:16px}
   .topbar{height:auto;min-height:64px;padding:16px;flex-wrap:wrap;gap:8px}
   body:has(.kpis) .topbar{min-height:auto;padding:16px}
@@ -578,6 +601,8 @@ label.f{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-b
   .dash-grid>.grid:last-child>.card:nth-child(2),
   .dash-grid>.grid:last-child>.card:nth-child(3){grid-column:span 1}
   #view>.row{padding:12px}
+  /* 页面级栅格在窄屏一律堆叠，覆盖模板里的内联列定义 */
+  #view>.grid{grid-template-columns:minmax(0,1fr)!important}
   .filters input{flex:1 1 100%;max-width:none}
   .filters select{flex:1 1 calc(50% - 4px);min-width:0}
   .tl-group{grid-template-columns:minmax(0,1fr);gap:8px}

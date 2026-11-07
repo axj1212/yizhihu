@@ -50,6 +50,7 @@ function route() {
   const page = (location.hash.replace("#/", "") || "dashboard").split("?")[0];
   state.page = PAGES[page] ? page : "dashboard";
   $$("#nav a").forEach(a => a.classList.toggle("on", a.dataset.page === state.page));
+  document.body.classList.remove("nav-open");
   $("#pageTitle").textContent = PAGES[state.page][0];
   $("#pageSub").textContent = PAGES[state.page][1];
   // 关闭抽屉并滚动到顶
@@ -829,4 +830,18 @@ async function saveDate() {
 }
 
 window.addEventListener("hashchange", route);
+
+// 移动端导航：宽度不足时侧栏收起，由顶部按钮展开；点遮罩或切页自动收起
+function toggleNav(open) {
+  const on = open === undefined ? !document.body.classList.contains("nav-open") : open;
+  document.body.classList.toggle("nav-open", on);
+  const btn = document.getElementById("navToggle");
+  if (btn) btn.setAttribute("aria-expanded", on ? "true" : "false");
+}
+document.addEventListener("click", (e) => {
+  if (e.target.closest("#navToggle")) { toggleNav(); return; }
+  if (e.target.closest("#navScrim")) toggleNav(false);
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") toggleNav(false); });
+
 window.addEventListener("DOMContentLoaded", route);

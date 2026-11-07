@@ -34,6 +34,9 @@
 
   <div class="main">
     <header class="topbar">
+      <button class="nav-toggle" id="navToggle" aria-label="展开导航菜单" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
       <div>
         <h1 id="pageTitle">工作台</h1>
         <div class="sub" id="pageSub">出院患者 AI 分阶段随访</div>
@@ -49,6 +52,7 @@
 </div>
 
 <div class="mask" id="mask" onclick="UI.closeAll()"></div>
+<div class="nav-scrim" id="navScrim"></div>
 <aside class="drawer" id="drawer">
   <div class="drawer-h">
     <h2 id="drawerTitle">详情</h2>
